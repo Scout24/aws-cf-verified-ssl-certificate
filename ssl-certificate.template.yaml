@@ -1,0 +1,237 @@
+Description: SES Domain Verification
+Parameters:
+  domain:
+    Type: String
+    Description: DNS domain to create a SES email for
+  hostedZoneName:
+    Type: String
+    Description: Route53 hosted zone name
+Resources:
+  #
+  # lambda function to create a SES domain idendity
+  # and return verification token for TXT record
+  #
+  sesDomainCustomResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Policies:
+      - PolicyName: SES
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Action:
+            - ses:VerifyDomainIdentity
+            - ses:DeleteIdentity
+            Resource:
+            - "*"
+            Effect: Allow
+      - PolicyName: cloudwatchLogsWriteAccess
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Action:
+            - logs:Describe*
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: "*"
+            Effect: Allow
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Action: sts:AssumeRole
+          Principal:
+            Service: lambda.amazonaws.com
+          Effect: Allow
+  sesDomainCustomResourceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: is24-infrastructure-public
+        S3Key: cloudformation/verified-ssl-certificate/lambda_functions.zip
+      Runtime: python2.7
+      Handler: ses_domain_identity.lambda_handler
+      Role: !GetAtt sesDomainCustomResourceRole.Arn
+      Timeout: 30
+
+  #
+  # lambda function to wait for SES domain verification finished
+  # and create a SES ruleset to forward admin-email-address to SNS
+  #
+  sesEmailAddressCustomResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Policies:
+      - PolicyName: SES
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Action:
+            - ses:GetIdentityVerificationAttributes
+            - ses:CreateReceiptRuleSet
+            - ses:CreateReceiptRule
+            - ses:DescribeActiveReceiptRuleSet
+            - ses:ReorderReceiptRuleSet
+            - ses:DeleteReceiptRule
+            - ses:DeleteReceiptRuleSet
+            Resource:
+            - "*"
+            Effect: Allow
+      - PolicyName: cloudwatchLogsWriteAccess
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Action:
+            - logs:Describe*
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: "*"
+            Effect: Allow
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Action: sts:AssumeRole
+          Principal:
+            Service: lambda.amazonaws.com
+          Effect: Allow
+  sesEmailAddressCustomResourceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: is24-infrastructure-public
+        S3Key: cloudformation/verified-ssl-certificate/lambda_functions.zip
+      Runtime: python2.7
+      Handler: ses_wait_for_verification_and_create_rule_set.lambda_handler
+      Role: !GetAtt sesEmailAddressCustomResourceRole.Arn
+      Timeout: 300
+
+  #
+  # lambda function to receice certificate verification SNS message,
+  # open verfication form and send form data
+  #
+  certificateVerificationLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Policies:
+      - PolicyName: SES
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Action:
+            - ses:GetIdentityVerificationAttributes
+            Resource:
+            - "*"
+            Effect: Allow
+      - PolicyName: cloudwatchLogsWriteAccess
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Action:
+            - logs:Describe*
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: "*"
+            Effect: Allow
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Action: sts:AssumeRole
+          Principal:
+            Service: lambda.amazonaws.com
+          Effect: Allow
+        - Action: sts:AssumeRole
+          Principal:
+            Service: ses.amazonaws.com
+          Effect: Allow
+  certificateVerificationLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: is24-infrastructure-public
+        S3Key: cloudformation/verified-ssl-certificate/lambda_functions.zip
+      Runtime: python2.7
+      Handler: process_cert_manager_mail.lambda_handler
+      Role: !GetAtt certificateVerificationLambdaRole.Arn
+      Timeout: 300
+
+  #
+  # custom resource to create SES domain identitiy
+  # and return verification token
+  #
+  sesDomain:
+    Type: Custom::sesDomain
+    Properties:
+      ServiceToken: !GetAtt sesDomainCustomResourceFunction.Arn
+      Region: !Ref AWS::Region
+      Domain: !Ref domain
+
+  #
+  # DNS TXT record to allow AWS to verify SES domain identity
+  #
+  sesDomainVerificationRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Comment: DNS entry for SES domain verification
+      HostedZoneName: !Ref hostedZoneName
+      Name: !Sub _amazonses.${domain}.
+      Type: TXT
+      TTL: 180
+      ResourceRecords:
+        - !Sub "\"${sesDomain.VerificationToken}\""
+
+  #
+  # DNS MX record to let AWS SES retrieve emails for domain wanted
+  #
+  sesDomainMXRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Comment: MX record for domain
+      HostedZoneName: !Ref hostedZoneName
+      Name: !Sub ${domain}.
+      Type: MX
+      TTL: 900
+      ResourceRecords:
+        - !Sub "10 inbound-smtp.${AWS::Region}.amazonaws.com."
+
+  #
+  # SNS topic to forward incoming admin emails to.
+  # Email verification lambda function is subscribed to this topic.
+  #
+  certificateVerificationSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Endpoint: !GetAtt certificateVerificationLambdaFunction.Arn
+          Protocol: lambda
+
+  certifactionVerificationSNSLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt certificateVerificationLambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref certificateVerificationSNSTopic
+
+  # Waits for domain to be validated by SES
+  # Creates rule to forward admin@domain.com to SNS topic
+  sesEmailAddress:
+    Type: Custom::sesEmailAddress
+    Properties:
+      ServiceToken: !GetAtt sesEmailAddressCustomResourceFunction.Arn
+      Region: !Ref AWS::Region
+      Domain: !Ref domain
+      VerifyRecord: !Ref sesDomainVerificationRecord
+      CertificateVerificationSNSTopicArn: !Ref certificateVerificationSNSTopic
+  sslCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref domain
+      DomainValidationOptions:
+        - DomainName: !Ref domain
+          ValidationDomain: !GetAtt sesEmailAddress.Domain
+Outputs:
+  sslCertificateArn:
+    Description: SSL certificate ARN
+    Value: !Ref sslCertificate
