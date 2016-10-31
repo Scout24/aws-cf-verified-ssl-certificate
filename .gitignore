@@ -1,5 +1,9 @@
 # Created by .ignore support plugin (hsz.mobi)
 *.iml
+
+lambda/requests
+lambda/requests*
+
 __pycache__/
 *.py[cod]
 *$py.class
