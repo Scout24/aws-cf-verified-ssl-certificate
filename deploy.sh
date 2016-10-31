@@ -9,7 +9,7 @@ cd lambda/
 
 # install python module 'requests'
 if [ ! -d "requests" ]; then
-    virtualenv-2.7 .
+    virtualenv .
     source bin/activate
     pip install -t $(pwd) requests
 fi
