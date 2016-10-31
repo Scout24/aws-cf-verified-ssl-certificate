@@ -21,3 +21,6 @@ zip -v -r $TMP_ZIP *.py requests
 # upload zip file
 aws s3 cp $TMP_ZIP $S3_URL/
 
+# upload template file
+aws s3 cp ssl-certificate.template.yaml $S3_URL/
+
