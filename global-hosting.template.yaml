@@ -9,8 +9,23 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: "|Ref|S3BucketName"
-      AccessControl: "PublicRead"
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: "|Ref|S3Bucket"
+      PolicyDocument:
+        Statement:
+        -
+          Action:
+            - s3:GetObject
+          Effect: Allow
+          Resource:
+            - "|Join|":
+              - "arn:aws:s3:::"
+              - "|Ref|S3Bucket"
+              - /*
+          Principal: "*"
 Outputs:
   S3BucketName:
     Description:  Name of the global S3 bucket
-    Value: '|Ref|S3Bucket'
+    Value: "|Ref|S3Bucket"
