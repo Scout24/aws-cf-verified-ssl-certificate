@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: S3 bucket for global hosting
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: Name of the global S3 bucket
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "|Ref|S3BucketName"
+      AccessControl: "PublicRead"
+Outputs:
+  S3BucketName:
+    Description:  Name of the global S3 bucket
+    Value: '|Ref|S3Bucket'
