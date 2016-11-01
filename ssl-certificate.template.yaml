@@ -6,6 +6,14 @@ Parameters:
   hostedZoneName:
     Type: String
     Description: Route53 hosted zone name
+  lambdaCodeS3Bucket:
+    Type: String
+    Description: S3 bucket hosting the lambda function code
+    Default: "is24-infrastructure-public"
+  lambdaCodeS3Key:
+    Type: String
+    Description: S3 key pointing to lambda function code
+    Default: "cloudformation/verified-ssl-certificate/labda_functions.zip"
 Resources:
   #
   # lambda function to create a SES domain idendity
@@ -47,8 +55,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: is24-infrastructure-public
-        S3Key: cloudformation/verified-ssl-certificate/lambda_functions.zip
+        S3Bucket: !Ref lambdaCodeS3Bucket
+        S3Key: !Ref lambdaCodeS3Key
       Runtime: python2.7
       Handler: ses_domain_identity.lambda_handler
       Role: !GetAtt sesDomainCustomResourceRole.Arn
@@ -99,8 +107,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: is24-infrastructure-public
-        S3Key: cloudformation/verified-ssl-certificate/lambda_functions.zip
+        S3Bucket: !Ref lambdaCodeS3Bucket
+        S3Key: !Ref lambdaCodeS3Key
       Runtime: python2.7
       Handler: ses_wait_for_verification_and_create_rule_set.lambda_handler
       Role: !GetAtt sesEmailAddressCustomResourceRole.Arn
@@ -149,8 +157,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: is24-infrastructure-public
-        S3Key: cloudformation/verified-ssl-certificate/lambda_functions.zip
+        S3Bucket: !Ref lambdaCodeS3Bucket
+        S3Key: !Ref lambdaCodeS3Key
       Runtime: python2.7
       Handler: process_cert_manager_mail.lambda_handler
       Role: !GetAtt certificateVerificationLambdaRole.Arn
