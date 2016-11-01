@@ -25,9 +25,10 @@ Properties:
 ```
 
 Output parameters are:
-|Parameter Name|Description|
-|--------------|-----------|
-|sslCertificateArn|ARN of the verified SSL certificate|
+
+| Parameter Name | Description |
+| -------------- | ----------- |
+| sslCertificateArn | ARN of the verified SSL certificate |
 
 ## Deploying the certificate stack
 Deploy the example stack like this
@@ -48,7 +49,8 @@ We provide the templates ready for you:
 ### Latest version:
 - Template: ```s3://is24-infrastructure-public/cloudformation/verified-ssl-certificate/ssl-certificate.template.yaml```
 - Lambda Code: ```s3://is24-infrastructure-public/cloudformation/verified-ssl-certificate/labda_functions.zip```
-### Specific version for commit ```<commit-hash```:
+
+### Specific version of commit ```<commit-hash>```:
 - Template: ```s3://is24-infrastructure-public/cloudformation/verified-ssl-certificate/<commit-hash>/ssl-certificate.template.yaml```
 - Lambda Code: ```s3://is24-infrastructure-public/cloudformation/verified-ssl-certificate/<commit-hash>/labda_functions.zip```
 
