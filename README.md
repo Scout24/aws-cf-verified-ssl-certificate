@@ -1,7 +1,7 @@
 # Get verified SSL certificate via CloudFormation
 
-Right now, it's hard to automcatically get a verified SSL/TLS certificate from AWS Certificate Manager in a CloudFormation stack, 
-because you need have a admin email address on one of the super domains. The solution provided here automates
+Right now, it's hard to automcatically retrieve a verified SSL/TLS certificate from AWS Certificate Manager via CloudFormation, 
+because you need to have at least a admin email address on one of your super domains. The solution provided here automates
 this process by managing the CloudFormation-unfriendly SES related stuff.
 
 ## Use the template as a nested stack
