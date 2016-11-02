@@ -23,8 +23,6 @@ def lambda_handler(event, context):
         logical_resource_id = event['LogicalResourceId']
         print 'LogicalResourceId: ' + logical_resource_id
 
-        physical_id = stack_name + '-' + logical_resource_id + '-lock'
-
         domain = event['ResourceProperties']['Domain']
         region = event['ResourceProperties']['Region']
         certificate_verification_sns_topic_arn = event['ResourceProperties']['CertificateVerificationSNSTopicArn']
@@ -35,8 +33,9 @@ def lambda_handler(event, context):
         if certificate_verification_sns_topic_arn:
             print 'CertificateVerificationSNSTopicArn: ' + certificate_verification_sns_topic_arn
 
-        rule_set_name = stack_name + '-admin-email'
-        rule_name = stack_name + '-admin-email-rule'
+        rule_set_name = (stack_name + '-admin-email')[0:62] # fixes problem rule set name is too long
+        rule_name = (stack_name + '-admin-email-rule')[0:62]  # fixes problem rule name is too long
+
         print 'RuleSetName: ' + rule_set_name
 
         ses = boto3.client('ses', region_name=region)
@@ -114,7 +113,7 @@ def lambda_handler(event, context):
                     print 'Rule ' + rule_name + ' exists. Deleting it...'
                     ses.delete_receipt_rule(RuleSetName=rule_set_name, RuleName=rule_name)
 
-                if rule_set_name == stack_name + '-admin-email':
+                if rule_set_name == (stack_name + '-admin-email')[0:62]:
                     print 'RuleSet was created by stack. Deleting it...'
                     ses.delete_receipt_rule_set(RuleSetName=rule_set_name)
 
