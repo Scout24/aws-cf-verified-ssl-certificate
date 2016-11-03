@@ -31,7 +31,25 @@ Output parameters are:
 
 | Parameter Name | Description |
 | -------------- | ----------- |
+| Arn | ARN of the verified SSL certificate |
 | sslCertificateArn | ARN of the verified SSL certificate |
+
+To reference the SSL certificate you can use the following snippet:
+```yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  LoadBalancerListenerHttps:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      Certificates:
+        - CertificateArn: !GetAtt SSLCertificate.Outputs.Arn
+```
 
 ## Deploying the certificate stack
 Deploy the example stack like this
