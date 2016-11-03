@@ -243,3 +243,6 @@ Outputs:
   sslCertificateArn:
     Description: SSL certificate ARN
     Value: !Ref sslCertificate
+  Arn:
+      Description: SSL certificate ARN
+      Value: !Ref sslCertificate
