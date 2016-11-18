@@ -65,7 +65,7 @@ def lambda_handler(event, context):
             print 'Found verification url: '
             print verification_url
 
-            response = requests.get(verification_url)
+            response = requests.get(verification_url, verify=False)
             if response.status_code != 200:
                 raise Exception('Calling verification url failed.')
 
@@ -80,7 +80,7 @@ def lambda_handler(event, context):
             payload = map(lambda entry: (entry['name'], entry['value']), parser.inputs)
             print 'Payload: ', payload
 
-            response = requests.post("https://certificates.amazon.com/approvals", data=payload)
+            response = requests.post("https://certificates.amazon.com/approvals", data=payload, verify=False)
             print 'POST response: ', response.status_code
             print 'POST response: ', response.content
 
