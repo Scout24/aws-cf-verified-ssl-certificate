@@ -16,19 +16,40 @@ super domain (e.g. ```mydomain.com```) which is needed to create DNS records for
 Then you can use the following YAML snippet to retrieve the verified SSL certificate:
 
 ```yaml
-Type: "AWS::CloudFormation::Stack"
-Properties:
-  Parameters:
-    domain: subdomain.mydomain.com
-    hostedZoneName: mydomain.com    # your hosted domain
-  TemplateURL: "s3://is24-infrastructure-public/cloudformation/verified-ssl-certificate/ssl-certificate.template.yaml"
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  SSLCertificate:
+    Type: "AWS::CloudFormation::Stack"
+    Properties:
+      Parameters:
+        domain: subdomain.mydomain.com
+        hostedZoneName: mydomain.com.    # your hosted domain
+      TemplateURL: "https://s3-eu-west-1.amazonaws.com/is24-infrastructure-public/cloudformation/verified-ssl-certificate/ssl-certificate.template.yaml"
 ```
 
 Output parameters are:
 
 | Parameter Name | Description |
 | -------------- | ----------- |
+| Arn | ARN of the verified SSL certificate |
 | sslCertificateArn | ARN of the verified SSL certificate |
+
+To reference the SSL certificate you can use the following snippet:
+```yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  LoadBalancerListenerHttps:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      Certificates:
+        - CertificateArn: !GetAtt SSLCertificate.Outputs.Arn
+```
 
 ## Deploying the certificate stack
 Deploy the example stack like this

@@ -13,7 +13,7 @@ Parameters:
   lambdaCodeS3Key:
     Type: String
     Description: S3 key pointing to lambda function code
-    Default: "cloudformation/verified-ssl-certificate/labda_functions.zip"
+    Default: "cloudformation/verified-ssl-certificate/lambda_functions.zip"
 Resources:
   #
   # lambda function to create a SES domain idendity
@@ -243,3 +243,6 @@ Outputs:
   sslCertificateArn:
     Description: SSL certificate ARN
     Value: !Ref sslCertificate
+  Arn:
+      Description: SSL certificate ARN
+      Value: !Ref sslCertificate
