@@ -232,13 +232,20 @@ Resources:
       Domain: !Ref domain
       VerifyRecord: !Ref sesDomainVerificationRecord
       CertificateVerificationSNSTopicArn: !Ref certificateVerificationSNSTopic
+
+  # the SSL certificate
   sslCertificate:
     Type: AWS::CertificateManager::Certificate
     Properties:
       DomainName: !Ref domain
+      SubjectAlternativeNames:
+        - !Sub "*.${domain}"
       DomainValidationOptions:
         - DomainName: !Ref domain
           ValidationDomain: !GetAtt sesEmailAddress.Domain
+        - DomainName: !Sub "*.${domain}"
+          ValidationDomain: !GetAtt sesEmailAddress.Domain
+
 Outputs:
   sslCertificateArn:
     Description: SSL certificate ARN
