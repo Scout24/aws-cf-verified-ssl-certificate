@@ -75,13 +75,14 @@ Resources:
           Version: 2012-10-17
           Statement:
           - Action:
-            - ses:GetIdentityVerificationAttributes
-            - ses:CreateReceiptRuleSet
             - ses:CreateReceiptRule
-            - ses:DescribeActiveReceiptRuleSet
-            - ses:ReorderReceiptRuleSet
+            - ses:CreateReceiptRuleSet
             - ses:DeleteReceiptRule
             - ses:DeleteReceiptRuleSet
+            - ses:DescribeActiveReceiptRuleSet
+            - ses:GetIdentityVerificationAttributes
+            - ses:ReorderReceiptRuleSet
+            - ses:SetActiveReceiptRuleSet
             Resource:
             - "*"
             Effect: Allow
@@ -90,9 +91,9 @@ Resources:
           Version: 2012-10-17
           Statement:
           - Action:
-            - logs:Describe*
             - logs:CreateLogGroup
             - logs:CreateLogStream
+            - logs:Describe*
             - logs:PutLogEvents
             Resource: "*"
             Effect: Allow
@@ -232,6 +233,7 @@ Resources:
       Domain: !Ref domain
       VerifyRecord: !Ref sesDomainVerificationRecord
       CertificateVerificationSNSTopicArn: !Ref certificateVerificationSNSTopic
+    DependsOn: sesDomainVerificationRecord
 
   # the SSL certificate
   sslCertificate:
