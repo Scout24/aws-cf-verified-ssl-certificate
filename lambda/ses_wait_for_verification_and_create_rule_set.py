@@ -4,123 +4,145 @@ import time
 
 from datetime import datetime
 
-def lambda_handler(event, context):
 
-    response_data = {}
-    try:
+class DomainVerifierAndRuleSetCreator:
+
+    def __init__(self, event, context):
+        self.event = event
+        self.context = context
+
         print 'Event: '
-        print str(event)
+        print str(self.event)
         print 'Context: '
-        print str(context)
+        print str(self.context)
 
-        request_type = event['RequestType']
-        print 'Type: ' + request_type
+        try:
+            self.request_type = self.event['RequestType']
+            print 'Type: ' + self.request_type
 
-        stack_id = event['StackId']
-        stack_name = stack_id.split('/')[1]
-        print 'Stack: ' + stack_name
+            self.stack_id = self.event['StackId']
+            self.stack_name = self.stack_id.split('/')[1]
+            print 'Stack: ' + self.stack_name
 
-        logical_resource_id = event['LogicalResourceId']
-        print 'LogicalResourceId: ' + logical_resource_id
+            self.logical_resource_id = self.event['LogicalResourceId']
+            print 'LogicalResourceId: ' + self.logical_resource_id
 
-        domain = event['ResourceProperties']['Domain']
-        region = event['ResourceProperties']['Region']
-        certificate_verification_sns_topic_arn = event['ResourceProperties']['CertificateVerificationSNSTopicArn']
+            self.domain = self.event['ResourceProperties']['Domain']
+            self.region = self.event['ResourceProperties']['Region']
+            self.certificate_verification_sns_topic_arn = self.event['ResourceProperties']['CertificateVerificationSNSTopicArn']
 
-        print 'Domain: ' + domain
-        print 'Region: ' + region
+            #self.alternative_names = self.event['ResourceProperties']['AlternativeNames'] if 'AlternativeNames' in self.event['ResourceProperties'] else None
 
-        if certificate_verification_sns_topic_arn:
-            print 'CertificateVerificationSNSTopicArn: ' + certificate_verification_sns_topic_arn
+            print 'Domain: ' + self.domain
+            print 'Region: ' + self.region
 
-        rule_set_name = (stack_name + '-admin-email')[0:62] # fixes problem rule set name is too long
-        rule_name = (stack_name + '-admin-email-rule')[0:62]  # fixes problem rule name is too long
+            if self.certificate_verification_sns_topic_arn:
+                print 'CertificateVerificationSNSTopicArn: ' + self.certificate_verification_sns_topic_arn
 
-        print 'RuleSetName: ' + rule_set_name
+            self.rule_set_name = (self.stack_name + '-admin-email')[0:62]  # fixes problem rule set name is too long
+            self.rule_name = (self.stack_name + '-admin-email-rule')[0:62]  # fixes problem rule name is too long
 
-        ses = boto3.client('ses', region_name=region)
+            print 'RuleSetName: ' + self.rule_set_name
 
-        if request_type in ['Create', 'Update']:
-            start = datetime.now()
-            status = 'Failed'
-            while (datetime.now() - start).total_seconds() < 240:
-                result = ses.get_identity_verification_attributes(Identities=[domain])['VerificationAttributes']
-                if domain in result:
-                    status = result[domain]['VerificationStatus']
-                    print 'Status: ' + status
-                    if status == 'Success':
-                        break
-                    time.sleep(5)
+            self.ses = boto3.client('ses', region_name=self.region)
+        except Exception as e:
+            print 'Exception occured: ' + str(e)
+            cfnresponse.send(self.event, self.context, cfnresponse.FAILED, {})
+            raise e
 
-            if status != 'Success':
-                raise Exception('Verification took to long. Aborting...')
+    def execute(self):
+        response_data = {}
+        try:
+            if self.request_type in ['Create', 'Update']:
+                self.wait_for_ses_domain_verification()
 
-            if request_type == 'Create':
-                result = ses.describe_active_receipt_rule_set()
-                rule_exists = False
-                rule_names = []
-                email_address = 'admin@' + domain
+                if self.request_type == 'Create':
+                    result = self.ses.describe_active_receipt_rule_set()
+                    rule_exists = False
+                    rule_names = []
+                    email_address = 'admin@' + self.domain
 
+                    if 'Metadata' in result and 'Name' in result['Metadata']:
+                        self.rule_set_name = result['Metadata']['Name']
+                        rule_names = map(lambda rule: rule['Name'], result['Rules'])
+                        rule_exists = self.rule_name in rule_names
+                    else:
+                        self.ses.create_receipt_rule_set(RuleSetName=self.rule_set_name)
+                        self.ses.set_active_receipt_rule_set(RuleSetName=self.rule_set_name)
+
+                    if not rule_exists:
+                        self.create_rule(email_address, rule_names)
+
+                    response_data['EmailAddress'] = email_address
+                    response_data['Domain'] = self.domain
+
+            elif self.request_type == 'Delete':
+                result = self.ses.describe_active_receipt_rule_set()
                 if 'Metadata' in result and 'Name' in result['Metadata']:
-                    rule_set_name = result['Metadata']['Name']
+                    print 'Active rule set exists'
+                    active_rule_set_name = result['Metadata']['Name']
                     rule_names = map(lambda rule: rule['Name'], result['Rules'])
-                    rule_exists = rule_name in rule_names
-                else:
-                    ses.create_receipt_rule_set(RuleSetName=rule_set_name)
+                    rule_exists = self.rule_name in rule_names
+                    if rule_exists:
+                        print 'Rule ' + self.rule_name + ' exists. Deleting it...'
+                        self.ses.delete_receipt_rule(RuleSetName=active_rule_set_name, RuleName=self.rule_name)
 
-                if not rule_exists:
-                    ses.create_receipt_rule(RuleSetName=rule_set_name, Rule={
-                        'Name': rule_name,
-                        'Enabled': True,
-                        'TlsPolicy': 'Require',
-                        'Recipients': [email_address],
-                        'Actions': [
-                            {
-                                'AddHeaderAction': {
-                                    'HeaderName': 'StackName',
-                                    'HeaderValue': stack_name
-                                }
-                            },
-                            {
-                                'AddHeaderAction': {
-                                    'HeaderName': 'Domain',
-                                    'HeaderValue': domain
-                                }
-                            },
-                            {
-                                'SNSAction': {
-                                    'TopicArn': certificate_verification_sns_topic_arn,
-                                }
-                            }
-                        ],
-                        'ScanEnabled': True
-                    })
+                    if active_rule_set_name == self.rule_set_name:
+                        print 'RuleSet was created by stack. Deleting it...'
+                        self.ses.set_active_receipt_rule_set()
+                        self.ses.delete_receipt_rule_set(RuleSetName=active_rule_set_name)
 
-                    rule_names.insert(0, rule_name)
-                    ses.reorder_receipt_rule_set(RuleSetName=rule_set_name, RuleNames=rule_names)
+            cfnresponse.send(self.event, self.context, cfnresponse.SUCCESS, response_data)
+        except Exception as e:
+            print 'Exception occured: ' + str(e)
+            cfnresponse.send(self.event, self.context, cfnresponse.FAILED, response_data)
+            raise e
 
-                response_data['EmailAddress'] = email_address
-                response_data['Domain'] = domain
+    def create_rule(self, email_address, rule_names):
+        self.ses.create_receipt_rule(RuleSetName=self.rule_set_name, Rule={
+            'Name': self.rule_name,
+            'Enabled': True,
+            'TlsPolicy': 'Require',
+            'Recipients': [email_address],
+            'Actions': [
+                {
+                    'AddHeaderAction': {
+                        'HeaderName': 'StackName',
+                        'HeaderValue': self.stack_name
+                    }
+                },
+                {
+                    'AddHeaderAction': {
+                        'HeaderName': 'Domain',
+                        'HeaderValue': self.domain
+                    }
+                },
+                {
+                    'SNSAction': {
+                        'TopicArn': self.certificate_verification_sns_topic_arn,
+                    }
+                }
+            ],
+            'ScanEnabled': True
+        })
+        rule_names.insert(0, self.rule_name)
+        self.ses.reorder_receipt_rule_set(RuleSetName=self.rule_set_name, RuleNames=rule_names)
 
-        elif request_type == 'Delete':
-            result = ses.describe_active_receipt_rule_set()
-            if 'Metadata' in result and 'Name' in result['Metadata']:
-                print 'Active rule set exists'
-                rule_set_name = result['Metadata']['Name']
-                rule_names = map(lambda rule: rule['Name'], result['Rules'])
-                rule_exists = rule_name in rule_names
-                if rule_exists:
-                    print 'Rule ' + rule_name + ' exists. Deleting it...'
-                    ses.delete_receipt_rule(RuleSetName=rule_set_name, RuleName=rule_name)
+    def wait_for_ses_domain_verification(self):
+        start = datetime.now()
+        status = 'Failed'
+        while (datetime.now() - start).total_seconds() < 240:
+            result = self.ses.get_identity_verification_attributes(Identities=[self.domain])['VerificationAttributes']
+            if self.domain in result:
+                status = result[self.domain]['VerificationStatus']
+                print 'Status: ' + status
+                if status == 'Success':
+                    break
+                time.sleep(5)
+        if status != 'Success':
+            raise Exception('Verification took to long. Aborting...')
 
-                if rule_set_name == (stack_name + '-admin-email')[0:62]:
-                    print 'RuleSet was created by stack. Deleting it...'
-                    ses.delete_receipt_rule_set(RuleSetName=rule_set_name)
 
-
-        cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
-    except Exception as e:
-        print 'Exception occured: ' + str(e)
-        cfnresponse.send(event, context, cfnresponse.FAILED, response_data)
-        raise e
-
+def lambda_handler(event, context):
+    handler = DomainVerifierAndRuleSetCreator(event, context)
+    handler.execute()
