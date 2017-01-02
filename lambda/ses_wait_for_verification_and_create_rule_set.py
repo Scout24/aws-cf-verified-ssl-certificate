@@ -39,8 +39,8 @@ class DomainVerifierAndRuleSetCreator:
             if self.certificate_verification_sns_topic_arn:
                 print 'CertificateVerificationSNSTopicArn: ' + self.certificate_verification_sns_topic_arn
 
-            self.rule_set_name = (self.stack_name + '-admin-email')[0:62]  # fixes problem rule set name is too long
-            self.rule_name = (self.stack_name + '-admin-email-rule')[0:62]  # fixes problem rule name is too long
+            self.rule_set_name = self.create_valid_name(self.stack_name + '-admin-email')
+            self.rule_name = self.create_valid_name(self.stack_name + '-admin-email-rule')
 
             print 'RuleSetName: ' + self.rule_set_name
 
@@ -141,6 +141,16 @@ class DomainVerifierAndRuleSetCreator:
                 time.sleep(5)
         if status != 'Success':
             raise Exception('Verification took to long. Aborting...')
+
+    def create_valid_name(self, name):
+        # fixes problem rule set name is too long
+        valid_name = name[0:62]
+
+        # fixed problem with dashes as last character
+        while not valid_name[-1].isalnum():
+            valid_name = valid_name[0:-1]
+
+        return valid_name
 
 
 def lambda_handler(event, context):
