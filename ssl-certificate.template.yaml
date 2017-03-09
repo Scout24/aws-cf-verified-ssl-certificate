@@ -154,6 +154,7 @@ Resources:
           Principal:
             Service: ses.amazonaws.com
           Effect: Allow
+
   certificateVerificationLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
