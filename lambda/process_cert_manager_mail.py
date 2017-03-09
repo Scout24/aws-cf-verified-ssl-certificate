@@ -46,17 +46,28 @@ def lambda_handler(event, context):
         print 'Context: '
         print str(context)
 
+        lambda_arn = context.invoked_function_arn
+        print 'Function ARN: {}'.format(lambda_arn)
+
+        lambda_arn_parts = lambda_arn.split(':')
+        region = lambda_arn_parts[3]
+        account_id = lambda_arn_parts[4]
+
+        print 'Region: {}'.format(region)
+        print 'Account ID: {}'.format(account_id)
+
+
         for record in event['Records']:
             message = json.loads(record['Sns']['Message'])
             if not is_amazon_email(message):
-                print 'Found unknown email: '
+                print 'Found unknown email!'
                 continue
 
             print 'Found Amazon email'
-            content = message['content']
+            email_content = message['content']
 
             pattern = re.compile('https://certificates.amazon.com/approvals[?&0-9a-zA-Z=-]+')
-            match = pattern.search(content)
+            match = pattern.search(email_content)
             if not match:
                 print 'Could not find URL in content!'
                 continue
@@ -69,13 +80,20 @@ def lambda_handler(event, context):
             if response.status_code != 200:
                 raise Exception('Calling verification url failed.')
 
+            page_content = response.content
             print 'Verification URL Content: '
-            print content
+            print page_content
+
+            account_id_formatted = '{}-{}-{}'.format(account_id[0:4], account_id[4:8], account_id[8:12])
+            if region not in page_content or account_id_formatted not in page_content:
+                print "ERROR: Verification page is not from expected account or region!!!! {} or {} is missing.".format(region, account_id_formatted)
+                continue
+
+            print 'Found {} and {} on verification page. It seems to be the right page!'.format(region, account_id_formatted)
 
             from input_field_parser import InputFieldParser
-            content = response.content
             parser = InputFieldParser()
-            parser.feed(content)
+            parser.feed(page_content)
 
             payload = map(lambda entry: (entry['name'], entry['value']), parser.inputs)
             print 'Payload: ', payload
