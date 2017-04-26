@@ -1,4 +1,4 @@
-Description: SES Domain Verification
+Description: SSL Verified Certificate
 Parameters:
   domain:
     Type: String
