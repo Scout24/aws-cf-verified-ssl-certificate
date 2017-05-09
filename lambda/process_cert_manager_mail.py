@@ -66,7 +66,7 @@ def lambda_handler(event, context):
             print 'Found Amazon email'
             email_content = message['content']
 
-            pattern = re.compile('https://certificates.amazon.com/approvals[?&0-9a-zA-Z=-]+')
+            pattern = re.compile('https://[0-9a-z-]+\.certificates.amazon.com/approvals[?&0-9a-zA-Z=-]+')
             match = pattern.search(email_content)
             if not match:
                 print 'Could not find URL in content!'
