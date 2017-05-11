@@ -1,13 +1,12 @@
 import unittest
 import sys
-import json
-sys.path.append("../../lambda/")
+sys.path.append("lambda/")
 
-from  process_cert_manager_mail  import *
+from process_cert_manager_mail import *
 
 class TestProcessCertManager(unittest.TestCase):
 
-    txt_input = open("../resources/sns_verification_message.txt", "r").read()
+    txt_input = open("test/resources/sns_verification_message.txt", "r").read()
     email_parsed = json.loads(txt_input)
     email_message = email_parsed['content']
 
