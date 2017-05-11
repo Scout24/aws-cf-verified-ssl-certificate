@@ -2,6 +2,8 @@
 
 set -x -e
 
+#python test/python/process_cert_manager_test.py
+
 S3_URL=${1:-s3://is24-infrastructure-public/cloudformation/verified-ssl-certificate}
 TMP_ZIP=$TMPDIR/lambda_functions.zip
 

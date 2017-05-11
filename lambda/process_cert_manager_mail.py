@@ -37,6 +37,19 @@ def is_amazon_email(message):
 
     return True
 
+def get_verification_url(email_content):
+    pattern = re.compile('https://[0-9a-z-]+\.certificates.amazon.com/approvals[?&0-9a-zA-Z=-]+')
+    match = pattern.search(email_content)
+
+    if not match:
+        print 'Could not find URL in content!'
+        raise Exception('No verification url found in email content.')
+
+    verification_url = match.group()
+    print 'Found verification url: '
+    print verification_url
+    return verification_url
+
 
 def lambda_handler(event, context):
 
@@ -66,15 +79,7 @@ def lambda_handler(event, context):
             print 'Found Amazon email'
             email_content = message['content']
 
-            pattern = re.compile('https://[0-9a-z-]+\.certificates.amazon.com/approvals[?&0-9a-zA-Z=-]+')
-            match = pattern.search(email_content)
-            if not match:
-                print 'Could not find URL in content!'
-                continue
-
-            verification_url = match.group()
-            print 'Found verification url: '
-            print verification_url
+            verification_url = get_verification_url(email_content)
 
             response = requests.get(verification_url, verify=False)
             if response.status_code != 200:
