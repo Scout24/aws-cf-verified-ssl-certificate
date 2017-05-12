@@ -56,11 +56,14 @@ class DomainVerifierAndRuleSetCreator:
             if self.request_type in ['Create', 'Update']:
                 self.wait_for_ses_domain_verification()
 
+                email_address = 'admin@' + self.domain
+                response_data['EmailAddress'] = email_address
+                response_data['Domain'] = self.domain
+                
                 if self.request_type == 'Create':
                     result = self.ses.describe_active_receipt_rule_set()
                     rule_exists = False
                     rule_names = []
-                    email_address = 'admin@' + self.domain
 
                     if 'Metadata' in result and 'Name' in result['Metadata']:
                         self.rule_set_name = result['Metadata']['Name']
@@ -73,8 +76,6 @@ class DomainVerifierAndRuleSetCreator:
                     if not rule_exists:
                         self.create_rule(email_address, rule_names)
 
-                    response_data['EmailAddress'] = email_address
-                    response_data['Domain'] = self.domain
 
             elif self.request_type == 'Delete':
                 result = self.ses.describe_active_receipt_rule_set()
