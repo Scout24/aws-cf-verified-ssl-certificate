@@ -12,7 +12,8 @@ this process by managing the CloudFormation-unfriendly SES related stuff.
   - lambda function is returning the verification token for TXT record 
 - SNS Topic for receiving approval emails
   - lambda function (`ses_wait_for_verification_and_create_rule_set`) is used to create a SES rule set to forward the certificate approval email to SNS
-  - lambda function (`process_cert_manager_mail`) is triggered by SNS events and verifies the certification request
+  - lambda function (`process_cert_manager_mail`) is triggered by SNS events and verifies the certification request by parsing the email to get the approval link and finally "clicking on it" via http post request
+  
 
 ## Use the template as a nested stack
 
