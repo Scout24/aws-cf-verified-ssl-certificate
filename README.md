@@ -77,8 +77,6 @@ aws cloudformation create-stack \
 Changes to this repo are automatically deployed via [teamcity](https://teamcity.rz.is/viewType.html?buildTypeId=Infrastructure_Aws_AwsCfVerifiedSslCertificateDeployment)
  after push.
 
-
-
 ## Download URLs
 
 We provide the templates ready for you:
@@ -90,6 +88,24 @@ We provide the templates ready for you:
 ### Specific version of commit ```<commit-hash>```:
 - Template: ```s3://is24-infrastructure-public/cloudformation/verified-ssl-certificate/<commit-hash>/ssl-certificate.template.yaml```
 - Lambda Code: ```s3://is24-infrastructure-public/cloudformation/verified-ssl-certificate/<commit-hash>/labda_functions.zip```
+
+### Development:
+
+```bash
+# buid an deploy code to your development bucket
+./deploy.sh s3://my-dev-bucket/my-prefix
+
+# deploy stack with development version
+aws cloudformation create-stack \
+  --stack-name my-ssl-stack \
+  --template-body file://$(pwd)/ssl-certificate.template.yaml \
+  --parameters \
+      ParameterKey=domain,ParameterValue=my-domain.example.com \
+      ParameterKey=hostedZoneName,ParameterValue=example.com. \
+      ParameterKey=lambdaCodeS3Bucket,ParameterValue=my-dev-bucket \
+      ParameterKey=lambdaCodeS3Key,ParameterValue=my-prefix/lambda_functions.zip \
+  --capabilities CAPABILITY_IAM
+```
 
 
 
