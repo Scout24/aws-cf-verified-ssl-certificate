@@ -11,13 +11,6 @@ TMP_ZIP=$TMPDIR/lambda_functions.zip
 
 cd lambda/
 
-# install python module 'requests'
-if [ ! -d "requests" ]; then
-    virtualenv .
-    source bin/activate
-    pip install -t $(pwd) requests
-fi
-
 # if tmp file exists, delete it
 if [ -e $TMP_ZIP ]; then rm $TMP_ZIP; fi
 

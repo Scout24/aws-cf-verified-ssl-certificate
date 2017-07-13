@@ -1,12 +1,16 @@
 import json
 import re
-import requests
+import urllib
+import urllib2
+import ssl
+
 
 def get_header(headers, name):
     for header in headers:
         if header['name'] == name:
             return header['value']
     return None
+
 
 def is_amazon_email(message):
     if 'headers' not in message['mail']:
@@ -16,14 +20,14 @@ def is_amazon_email(message):
     headers = message['mail']['headers']
 
     domain = get_header(headers, 'Domain')
-    stackName = get_header(headers, 'StackName')
+    stack_name = get_header(headers, 'StackName')
     subject = get_header(headers, 'Subject')
 
-    if not domain or not stackName:
+    if not domain or not stack_name:
         print 'ERROR: could not find Domain or StackName header'
         return False
 
-    if not domain in subject:
+    if domain not in subject:
         print 'ERROR: domain is not in subject'
         return False
 
@@ -37,8 +41,9 @@ def is_amazon_email(message):
 
     return True
 
+
 def get_verification_url(email_content):
-    pattern = re.compile('https://[0-9a-z-]+\.certificates.amazon.com/approvals[?&0-9a-zA-Z=-]+')
+    pattern = re.compile('https://([0-9a-z-]+\.)?certificates.amazon.com/approvals[?&0-9a-zA-Z=-]+')
     match = pattern.search(email_content)
 
     if not match:
@@ -69,6 +74,9 @@ def lambda_handler(event, context):
         print 'Region: {}'.format(region)
         print 'Account ID: {}'.format(account_id)
 
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
 
         for record in event['Records']:
             message = json.loads(record['Sns']['Message'])
@@ -81,20 +89,22 @@ def lambda_handler(event, context):
 
             verification_url = get_verification_url(email_content)
 
-            response = requests.get(verification_url, verify=False)
-            if response.status_code != 200:
+            response = urllib2.urlopen(verification_url, context=ssl_context)
+            if response.getcode() != 200:
                 raise Exception('Calling verification url failed.')
 
-            page_content = response.content
+            page_content = response.read()
             print 'Verification URL Content: '
             print page_content
 
             account_id_formatted = '{}-{}-{}'.format(account_id[0:4], account_id[4:8], account_id[8:12])
             if region not in page_content or account_id_formatted not in page_content:
-                print "ERROR: Verification page is not from expected account or region!!!! {} or {} is missing.".format(region, account_id_formatted)
+                print "ERROR: Verification page is not from expected account or region!!!! {} or {} is missing."\
+                    .format(region, account_id_formatted)
                 continue
 
-            print 'Found {} and {} on verification page. It seems to be the right page!'.format(region, account_id_formatted)
+            print 'Found {} and {} on verification page. It seems to be the right page!'\
+                .format(region, account_id_formatted)
 
             from input_field_parser import InputFieldParser
             parser = InputFieldParser()
@@ -103,10 +113,14 @@ def lambda_handler(event, context):
             payload = map(lambda entry: (entry['name'], entry['value']), parser.inputs)
             print 'Payload: ', payload
 
-            response = requests.post("https://certificates.amazon.com/approvals", data=payload, verify=False)
-            print 'POST response: ', response.status_code
-            print 'POST response: ', response.content
+            # fix utf8 problem
+            payload = [(key, value) for (key, value) in payload if key != 'utf8']
 
+            response = urllib2.urlopen("https://certificates.amazon.com/approvals",
+                                       data=urllib.urlencode(payload),
+                                       context=ssl_context)
+            print 'POST response: ', response.getcode()
+            print 'POST response: ', response.read()
 
     except Exception as e:
         print 'Exception occured: ' + str(e)
