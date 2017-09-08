@@ -14,12 +14,32 @@ Parameters:
     Type: String
     Description: S3 key pointing to lambda function code
     Default: "cloudformation/verified-ssl-certificate/lambda_functions.zip"
+  sesDomainCustomResourceRoleArn:
+    Type: String
+    Description: The ARN of the IAM role to use for the SES domain custom resource
+    Default: ""
+  sesEmailAddressCustomResourceRoleArn:
+    Type: String
+    Description: The ARN of the IAM role to use for the SES email address custom resource
+    Default: ""
+  certificateVerificationLambdaRoleArn:
+    Type: String
+    Description: The ARN of the IAM role to use for the certificate verification lambda function
+    Default: ""
+Conditions:
+  createCFsesDomainCustomResourceRole:
+    !Equals [ !Ref sesDomainCustomResourceRoleArn, "" ]
+  createCFsesEmailAddressCustomResourceRole:
+    !Equals [ !Ref sesEmailAddressCustomResourceRoleArn, "" ]
+  createCFcertificateVerificationLambdaRole:
+    !Equals [ !Ref certificateVerificationLambdaRoleArn, "" ]
 Resources:
   #
   # lambda function to create a SES domain idendity
   # and return verification token for TXT record
   #
   sesDomainCustomResourceRole:
+    Condition: createCFsesDomainCustomResourceRole
     Type: AWS::IAM::Role
     Properties:
       Policies:
@@ -59,7 +79,7 @@ Resources:
         S3Key: !Ref lambdaCodeS3Key
       Runtime: python2.7
       Handler: ses_domain_identity.lambda_handler
-      Role: !GetAtt sesDomainCustomResourceRole.Arn
+      Role: !If [ createCFsesDomainCustomResourceRole, !GetAtt sesDomainCustomResourceRole.Arn, !Ref sesDomainCustomResourceRoleArn ]
       Timeout: 30
 
   #
@@ -67,6 +87,7 @@ Resources:
   # and create a SES ruleset to forward admin-email-address to SNS
   #
   sesEmailAddressCustomResourceRole:
+    Condition: createCFsesEmailAddressCustomResourceRole
     Type: AWS::IAM::Role
     Properties:
       Policies:
@@ -112,7 +133,7 @@ Resources:
         S3Key: !Ref lambdaCodeS3Key
       Runtime: python2.7
       Handler: ses_wait_for_verification_and_create_rule_set.lambda_handler
-      Role: !GetAtt sesEmailAddressCustomResourceRole.Arn
+      Role: !If [ createCFsesEmailAddressCustomResourceRole, !GetAtt sesEmailAddressCustomResourceRole.Arn, !Ref sesEmailAddressCustomResourceRoleArn ]
       Timeout: 300
 
   #
@@ -120,6 +141,7 @@ Resources:
   # open verfication form and send form data
   #
   certificateVerificationLambdaRole:
+    Condition: createCFcertificateVerificationLambdaRole
     Type: AWS::IAM::Role
     Properties:
       Policies:
@@ -163,7 +185,7 @@ Resources:
         S3Key: !Ref lambdaCodeS3Key
       Runtime: python2.7
       Handler: process_cert_manager_mail.lambda_handler
-      Role: !GetAtt certificateVerificationLambdaRole.Arn
+      Role: !If [ createCFcertificateVerificationLambdaRole, !GetAtt certificateVerificationLambdaRole.Arn, !Ref certificateVerificationLambdaRoleArn ]
       Timeout: 300
 
   #
