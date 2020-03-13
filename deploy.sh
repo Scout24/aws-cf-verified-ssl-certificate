@@ -15,7 +15,8 @@ cd lambda/
 if [ -e $TMP_ZIP ]; then rm $TMP_ZIP; fi
 
 # create zip
-zip -v -r $TMP_ZIP *.py requests
+pip install requests
+zip -v -r $TMP_ZIP
 
 # get current git commit hash
 COMMIT_HASH=$(git rev-parse HEAD)
