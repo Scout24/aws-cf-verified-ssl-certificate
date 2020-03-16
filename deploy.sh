@@ -15,7 +15,7 @@ cd lambda/
 if [ -e $TMP_ZIP ]; then rm $TMP_ZIP; fi
 
 # create zip
-pip install requests
+pip install -t . requests
 zip -v -r $TMP_ZIP .
 
 # get current git commit hash
