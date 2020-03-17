@@ -8,7 +8,7 @@ python test/python/process_cert_manager_test.py
 S3_BUCKET=${1:-is24-infrastructure-public}
 CREATE_INFRASTRUCTURE=${2:-true}
 S3_URL=s3://${S3_BUCKET}/cloudformation/verified-ssl-certificate
-TMP_ZIP=$TMPDIR/lambda_functions.zip
+TMP_ZIP=lambda_functions.zip
 
 cd lambda/
 
