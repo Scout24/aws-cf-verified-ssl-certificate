@@ -7,6 +7,7 @@ python test/python/process_cert_manager_test.py
 
 S3_BUCKET=${1:-is24-infrastructure-public}
 CREATE_INFRASTRUCTURE=${2:-true}
+GLOBAL_HOSTING_TEMPLATE=${3:-global-hosting.template.yaml}
 S3_URL=s3://${S3_BUCKET}/cloudformation/verified-ssl-certificate
 TMP_ZIP=lambda_functions.zip
 
@@ -33,7 +34,7 @@ aws s3 cp ../ssl-certificate.template.yaml "$S3_URL"/"$COMMIT_HASH"/
 
 if [ "${CREATE_INFRASTRUCTURE}" == "true" ]
 then
-  aws cloudformation deploy --template global-hosting.template.yaml --parameter-overrides S3BucketName="${S3_BUCKET}" \
+  aws cloudformation deploy --template "${GLOBAL_HOSTING_TEMPLATE}" --parameter-overrides S3BucketName="${S3_BUCKET}" \
     --tags segment=infrastructure usecase=cf-verified-ssl-certificate \
     --stack-name global-cf-verified-ssl-certificate-hosting
 fi
