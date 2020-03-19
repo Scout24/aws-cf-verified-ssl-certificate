@@ -74,9 +74,6 @@ aws cloudformation create-stack \
   --capabilities CAPABILITY_IAM
 ```
 
-Changes to this repo are automatically deployed via [teamcity](https://teamcity.rz.is/viewType.html?buildTypeId=Infrastructure_Aws_AwsCfVerifiedSslCertificateDeployment)
- after push.
-
 ## Download URLs
 
 We provide the templates ready for you:
@@ -93,7 +90,7 @@ We provide the templates ready for you:
 
 ```bash
 # buid an deploy code to your development bucket
-./deploy.sh s3://my-dev-bucket/my-prefix
+./deploy.sh s3://my-dev-bucket/my-prefix false
 
 # deploy stack with development version
 aws cloudformation create-stack \
