@@ -24,12 +24,12 @@ zip -v -r "$TMP_ZIP" .
 COMMIT_HASH=$(git rev-parse HEAD)
 
 # upload zip file
-aws s3 cp $TMP_ZIP $S3_URL/
-aws s3 cp $TMP_ZIP $S3_URL/"$COMMIT_HASH"/
+aws s3 cp --acl public-read $TMP_ZIP $S3_URL/
+aws s3 cp --acl public-read $TMP_ZIP $S3_URL/"$COMMIT_HASH"/
 
 # upload template file
-aws s3 cp ../ssl-certificate.template.yaml "$S3_URL"/
-aws s3 cp ../ssl-certificate.template.yaml "$S3_URL"/"$COMMIT_HASH"/
+aws s3 cp --acl public-read ../ssl-certificate.template.yaml "$S3_URL"/
+aws s3 cp --acl public-read ../ssl-certificate.template.yaml "$S3_URL"/"$COMMIT_HASH"/
 
 
 if [ "${CREATE_INFRASTRUCTURE}" == "true" ]
