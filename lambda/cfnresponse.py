@@ -15,30 +15,29 @@ FAILED = "FAILED"
 def send(event, context, responseStatus, responseData, physicalResourceId=None):
     responseUrl = event['ResponseURL']
 
-    print responseUrl
+    print(responseUrl)
 
-    responseBody = {}
-    responseBody['Status'] = responseStatus
-    responseBody['Reason'] = 'See the details in CloudWatch Log Stream: ' + context.log_stream_name
-    responseBody['PhysicalResourceId'] = physicalResourceId or context.log_stream_name
-    responseBody['StackId'] = event['StackId']
-    responseBody['RequestId'] = event['RequestId']
-    responseBody['LogicalResourceId'] = event['LogicalResourceId']
-    responseBody['Data'] = responseData
+    response_body = {'Status': responseStatus,
+                     'Reason': 'See the details in CloudWatch Log Stream: ' + context.log_stream_name,
+                     'PhysicalResourceId': physicalResourceId or context.log_stream_name, 
+                     'StackId': event['StackId'],
+                     'RequestId': event['RequestId'], 
+                     'LogicalResourceId': event['LogicalResourceId'],
+                     'Data': responseData}
 
-    json_responseBody = json.dumps(responseBody)
+    json_response_body = json.dumps(response_body)
 
-    print "Response body:\n" + json_responseBody
+    print("Response body:\n" + json_response_body)
 
     headers = {
-        'content-type' : '',
-        'content-length' : str(len(json_responseBody))
+        'content-type': '',
+        'content-length': str(len(json_response_body))
     }
 
     try:
         response = requests.put(responseUrl,
-                                data=json_responseBody,
+                                data=json_response_body,
                                 headers=headers)
-        print "Status code: " + response.reason
+        print("Status code: " + response.reason)
     except Exception as e:
-        print "send(..) failed executing requests.put(..): " + str(e)
+        print("send(..) failed executing requests.put(..): " + str(e))
