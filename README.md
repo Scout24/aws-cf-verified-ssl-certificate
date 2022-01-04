@@ -1,3 +1,9 @@
+# ⚠️ This repository is deprecated
+
+AWS allows validation of Certificate Manager certificates by creating DNS records. When the domains are managed by Route53, CloudFormation will take care of the maintenance of the DNS records. This approach is faster and less error-prone than the e-mail-based approach we offer here.
+
+For this reason we will no longer maintain this repository. It will archived and thus be read-only.
+
 # Get verified SSL certificate via CloudFormation
 
 Right now, it's hard to automcatically retrieve a verified SSL/TLS certificate from AWS Certificate Manager via CloudFormation, 
